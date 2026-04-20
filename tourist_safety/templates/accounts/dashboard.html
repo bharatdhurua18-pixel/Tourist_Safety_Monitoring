@@ -1,0 +1,190 @@
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 900px;
+    margin: auto;
+    padding: 20px;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    transition : 0.3s;
+
+}
+.card:hover {
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+          
+    }
+
+h2, h3 {
+    color: #2c3e50;
+}
+
+button {
+    cursor: pointer;
+}
+.sos-btn {
+    width: 80px;
+    height: 80px;
+    background: red;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 30px;
+    display: block;
+    margin: 10px auto;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    transition: 0.2s;
+}
+
+.sos-btn:hover {
+    transform: scale(1.1);
+    background: darkred;
+}
+
+</style>
+<body>
+<div class=container>    
+ 
+<div class="card">
+    <h2>👤 Welcome</h2>
+    <p>
+        {% if tourist %}
+            {{ tourist.name }}
+        {% else %}
+            Bharat
+        {% endif %}
+    </p>
+</div>
+
+
+<div class="card">
+    <h3>📍 Live Location</h3>
+    <p id="locationText">Fetching location...</p>
+    <p id="lastUpdated">Last updated: --</p>
+</div>
+
+<div class="card">
+    <h3>🚨 Emergency</h3>
+
+    <button onclick="sendSOS()" class="sos-btn">
+         SOS 
+    </button>
+
+    <p id="sosStatus"></p>
+</div>
+
+
+<div class="card">
+    <h3>🛡️ Safety Tips</h3>
+    <ul>
+        <li>Stay in well-lit areas</li>
+        <li>Avoid restricted zones</li>
+        <li>Keep emergency contacts ready</li>
+        <li>Use SOS if needed</li>
+    </ul>
+</div>
+
+
+<div class="card">
+    <h3>📞 Emergency Contacts</h3>
+
+    <p>🚓 Police: <b>100</b> <a href="tel:100">📞</a></p>
+    <p>🚑 Ambulance: <b>102</b> <a href="tel:102">📞</a></p>
+    <p>🔥 Fire: <b>101</b> <a href="tel:101">📞</a></p>
+    <p>📞 Tourist Helpline: <b>1363</b> <a href="tel:1363">📞</a></p>
+</div>
+
+
+<h4>📍 Nearest Police Station</h4>
+<p id="policeStation">Fetching location...</p>
+
+
+
+
+<a href="{% url 'logout' %}"> Logout </a>
+
+
+</div>
+</body>
+
+<script>
+function sendLocation(position) {
+    const lat = position.coords.latitude;
+    const lng = position.coords.longitude;
+
+    // Show on screen
+    document.getElementById("locationText").innerText =
+        "Latitude: " + lat + " | Longitude: " + lng;
+    document.getElementById("last updated").innerText =
+        "Last updated: " + new Date().toLocaleTimeString();    
+
+    fetch('/tracker/update-location/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            latitude: lat,
+            longitude: lng
+        })
+    });
+}
+
+
+function errorHandler(error) {
+    console.log(error);
+}
+
+function sendSOS() {
+    if (confirm("Are you sure you want to send SOS?")) {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+
+                fetch('/tracker/send-sos/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    })
+                });
+
+                document.getElementById("sosStatus").innerText =
+                    "🚨 SOS sent! Authorities have been notified.";
+            });
+        }
+    }
+}
+
+
+
+if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(sendLocation, errorHandler);
+}
+
+
+function showNearbyStation(position) {
+    const lat = position.coords.latitude;
+    const lng = position.coords.longitude;
+
+    document.getElementById("policeStation").innerText =
+        "Near your location (Lat: " + lat.toFixed(3) + ", Lng: " + lng.toFixed(3) + ")";
+}
+
+if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(showNearbyStation);
+}
+</script>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Map</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background: #102c48;
+        }
+        h2 {
+            padding: 2px ;
+        }
+        #map {
+        height: 60vh;
+        margin: 10px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+
+<h2  style="text-align:center; color:#f3f4f5;" >
+    Live Tracking
+</h2>
+
+<div id="map"></div>
+<div style="display:flex; gap:20px; padding:10px; color:#f3f4f5; justify-content:center;">
+    <div>👥 Tourists: {{ total_users }}</div>
+    <div>🚨 Active SOS: {{ active_sos }}</div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+    var map = L.map('map').setView([21.2268, 81.6673], 12); // Bhopal
+L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+    attribution: 'OpenStreetMap France'
+}).addTo(map);
+
+
+
+     var markers = [];
+     var sosMarkers = [];
+
+    function loadLocations() {
+        fetch('/tracker/get-locations/')
+        .then(response => response.json())
+        .then(data => {
+
+            // Remove old markers
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+
+            //clear sos markers
+            sosMarkers.forEach(marker => map.removeLayer(marker));
+            sosMarkers = [];
+
+            // Add normal markers
+            data.locations.forEach(loc => {
+                var marker = L.marker([loc.lat, loc.lng]).addTo(map);
+                marker.bindPopup(`User: ${loc.user}`);
+                markers.push(marker);
+            });
+
+              // Red icon for SOS
+            var redIcon = L.icon({
+                iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                iconSize: [32, 32]
+            });
+
+            // Add SOS markers
+            data.sos.forEach(loc => {
+                var marker = L.marker([loc.lat, loc.lng], {icon: redIcon}).addTo(map);
+                marker.bindPopup(`<b>🚨 SOS ALERT</b><br>
+                   Time: ${loc.time}<br>
+                   <button onclick="resolveSOS(${loc.id})">Resolve</button>`);
+                sosMarkers.push(marker);
+            });
+
+        });
+    }
+    function resolveSOS(alertId) {
+        fetch(`/tracker/resolve-sos/${alertId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then(response => {
+            if (response.ok) {
+                alert("SOS Resolved!");
+                loadLocations(); // Refresh the map
+            } else {
+                alert("Failed to resolve SOS.");
+            }
+        });
+    }
+
+    // Load every 5 seconds
+    setInterval(loadLocations, 5000);
+
+    // Initial load
+    loadLocations();
+</script>
+
+</body>
+</html>
